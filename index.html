@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>估值模型体系 · 搭建指南</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --sub:#6b7280; --line:#e5e7eb;
+    --accent:#1e3a8a; --accent2:#0e7490; --good:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --soft:#eef2ff; --rev:#2563eb; --net:#0e7490; --cash:#16a34a; --cfo:#2563eb; --cfi:#dc2626; --cff:#16a34a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.65;font-size:14px}
+  header{background:linear-gradient(135deg,#1e3a8a,#0e7490);color:#fff;padding:24px 26px}
+  header h1{margin:0 0 6px;font-size:23px}
+  header p{margin:0;opacity:.92;font-size:13px;max-width:760px}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  .toc{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:18px;
+    display:flex;gap:8px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .toc a{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;
+    padding:5px 12px;border-radius:20px;background:var(--soft)}
+  .toc a:hover{background:var(--accent);color:#fff}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .card h2{font-size:18px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+  .card h2 .tag{font-size:11px;font-weight:700;color:var(--accent);background:var(--soft);padding:2px 9px;border-radius:20px}
+  .card h3{font-size:15px;margin:18px 0 8px;color:var(--accent2);border-left:3px solid var(--accent2);padding-left:8px}
+  p{margin:8px 0}
+  .note{font-size:12.5px;color:var(--sub);margin-top:10px}
+  .analogy{background:var(--soft);border-radius:10px;padding:12px 14px;font-size:13px;margin:12px 0}
+  .analogy b{color:var(--accent2)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+  th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:#f8fafc;color:var(--sub);font-weight:600}
+  code{background:#f1f5f9;padding:1px 6px;border-radius:5px;font-size:12.5px;color:#be123c;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+  .mc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .mc h4{margin:0 0 8px;font-size:14px;color:var(--accent)}
+  .row{display:flex;align-items:center;justify-content:space-between;margin:7px 0;gap:8px}
+  .row label{font-size:12.5px;color:var(--sub)}
+  .row input{width:92px;padding:5px 7px;border:1px solid var(--line);border-radius:7px;font-size:13px;text-align:right;color:var(--ink)}
+  .row input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .btn-primary{background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn-primary:hover{opacity:.92}
+  .out{margin-top:10px;background:#f8fafc;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
+  .out b{color:var(--accent)}
+  .pill{font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px;margin-left:6px}
+  .pill.g{background:#dcfce7;color:var(--good)} .pill.y{background:#fef3c7;color:var(--warn)} .pill.r{background:#fee2e2;color:var(--bad)}
+  .formula{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:12px 14px;font-size:13px;overflow-x:auto;margin:10px 0;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .formula .v{color:#7dd3fc} .formula .c{color:#fbbf24}
+  .legend{font-size:12px;color:var(--sub);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  footer{color:var(--sub);font-size:12px;text-align:center;padding:20px}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-right:6px}
+  .badge.rel{background:#dbeafe;color:#1d4ed8} .badge.abs{background:#ccfbf1;color:#0f766e} .badge.ass{background:#fef3c7;color:#b45309} .badge.adv{background:#fae8ff;color:#a21caf}
+</style>
+</head>
+<body>
+<header>
+  <h1>📐 估值模型体系 · 搭建指南</h1>
+  <p>把投资研究中常用的估值方法按「相对估值 / 绝对估值 / 资产基础法 / 进阶」四类梳理，每种给出核心公式、适用场景、优缺点与搭建步骤，并配 4 个可交互计算器。可与你已建的「三张表财务模型」联动使用。</p>
+</header>
+
+<div class="wrap">
+  <nav class="toc">
+    <a href="#overview">总览</a>
+    <a href="#relative">相对估值</a>
+    <a href="#absolute">绝对估值</a>
+    <a href="#asset">资产基础法</a>
+    <a href="#advanced">进阶/特殊</a>
+    <a href="#choose">怎么选</a>
+    <a href="#link">与三表衔接</a>
+  </nav>
+
+  <!-- 总览 -->
+  <div class="card" id="overview">
+    <h2>🧭 一、总览：估值的三条大路 <span class="tag">地图</span></h2>
+    <p>估值本质只有两类思想：<b>看别人怎么定价（相对）</b> 和 <b>看自己能生多少钱（绝对）</b>。资产基础法是两者的"地板"。</p>
+    <div class="grid3">
+      <div class="mc"><h4><span class="badge rel">相对</span>相对估值法</h4>
+        <p style="font-size:13px">用「可比公司 / 可比交易」的倍数给目标定价。快、市场化的，但依赖市场不犯傻、且要找到真可比对象。<br>代表：P/E、P/B、P/S、PEG、EV/EBITDA。</p></div>
+      <div class="mc"><h4><span class="badge abs">绝对</span>绝对估值法</h4>
+        <p style="font-size:13px">把公司未来能产生的现金流/分红/剩余收益，按风险折现到今天再加总。逻辑最硬，但高度依赖假设。<br>代表：DCF、DDM、剩余收益模型。</p></div>
+      <div class="mc"><h4><span class="badge ass">资产</span>资产基础法</h4>
+        <p style="font-size:13px">从"清算 / 重置"角度算底线价值。适合重资产、破净、控股收购、金融机构。<br>代表：账面价值、清算价值、重置成本(Tobin's Q)。</p></div>
+    </div>
+    <div class="analogy">🍎 <b>类比</b>：相对估值像"看同小区同户型的房子最近卖多少钱来估自家房价"；绝对估值像"把这套房未来每年能收的租金按风险打折后全加起来"；资产基础法像"万一断供拍卖，拆了卖地+卖砖能拿回多少"。三种视角互补，实战通常<b>多方法交叉验证</b>。</div>
+  </div>
+
+  <!-- 相对估值 -->
+  <div class="card" id="relative">
+    <h2>📊 二、相对估值法（乘数法） <span class="tag">市场比较</span></h2>
+    <p>核心逻辑：<code>目标价值 = 目标某财务基数 × 合理倍数</code>。倍数来自可比对象的中位/均值，或用基本面推导"合理倍数"。</p>
+
+    <h3>2.1 常用乘数一览</h3>
+    <table>
+      <thead><tr><th>乘数</th><th>公式</th><th>最适合</th><th>主要缺陷</th></tr></thead>
+      <tbody>
+        <tr><td><b>P/E 市盈率</b></td><td>股价 ÷ 每股收益(EPS)</td><td>盈利稳定的成熟公司</td><td>亏损/微利失效；受会计利润操纵影响</td></tr>
+        <tr><td><b>P/B 市净率</b></td><td>股价 ÷ 每股净资产(BVPS)</td><td>银行/保险等金融资产、破净股</td><td>轻资产公司(如软件)账面值失真</td></tr>
+        <tr><td><b>P/S 市销率</b></td><td>股价 ÷ 每股收入</td><td>高增长未盈利、电商/SAAS</td><td>忽略利润率与成本结构差异</td></tr>
+        <tr><td><b>PEG</b></td><td>P/E ÷ (盈利增速×100)</td><td>高增长公司横向比</td><td>假设增速可持续，对g极敏感</td></tr>
+        <tr><td><b>EV/EBITDA</b></td><td>企业价值 ÷ EBITDA</td><td>跨资本结构/税负比较、并购</td><td>忽略资本开支差异（重资产失真）</td></tr>
+        <tr><td><b>EV/EBIT</b></td><td>企业价值 ÷ 息税前利润</td><td>资本密集但折旧政策差异大</td><td>仍忽略 capex 节奏</td></tr>
+        <tr><td><b>P/CF</b></td><td>股价 ÷ 每股经营现金流</td><td>利润含大量非付现的公司</td><td>经营现金流可被营运资本操纵</td></tr>
+        <tr><td><b>股息率</b></td><td>每股股息 ÷ 股价</td><td>红利策略、防御型资产</td><td>仅覆盖分红部分，忽略留存再投资</td></tr>
+      </tbody>
+    </table>
+    <p class="note">注：P/E、P/B、P/S、P/CF 是"股权口径"（分母用股价/股数）；EV/EBITDA、EV/EBIT 是"企业口径"（分母用企业价值，含债权），更适合跨杠杆比较。</p>
+
+    <h3>2.2 交互：P/E & PEG 合理定价器（基本面推导合理倍数）</h3>
+    <div class="grid2">
+      <div class="mc">
+        <div class="row"><label>次年 EPS（元/股）</label><input id="pe_eps" type="number" value="2.00" step="0.1"></div>
+        <div class="row"><label>分红率（%）</label><input id="pe_pay" type="number" value="40" step="1"></div>
+        <div class="row"><label>永续增长率 g（%）</label><input id="pe_g" type="number" value="4" step="0.5"></div>
+        <div class="row"><label>要求回报率 r（%）</label><input id="pe_r" type="number" value="9" step="0.5"></div>
+        <button class="btn-primary" onclick="calcPE()">计算</button>
+      </div>
+      <div class="out" id="pe_out">填写左侧并点击计算。</div>
+    </div>
+    <div class="formula">
+      <span class="c"># Gordon 推导的"合理 P/E"：</span><br>
+      合理P/E = <span class="v">分红率 × (1+g)</span> ÷ <span class="v">(r − g)</span><br>
+      合理股价 = 合理P/E × EPS₁&nbsp;&nbsp;|&nbsp;&nbsp; PEG = 合理P/E ÷ (g×100)
+    </div>
+
+    <h3>2.3 交互：EV/EBITDA 可比法定价</h3>
+    <div class="grid2">
+      <div class="mc">
+        <div class="row"><label>目标 EBITDA（万元）</label><input id="ev_ebitda" type="number" value="500" step="10"></div>
+        <div class="row"><label>可比 EV/EBITDA 倍数</label><input id="ev_mul" type="number" value="10" step="0.5"></div>
+        <div class="row"><label>净债务（万元）</label><input id="ev_nd" type="number" value="300" step="10"></div>
+        <div class="row"><label>股本数（万股）</label><input id="ev_sh" type="number" value="200" step="10"></div>
+        <button class="btn-primary" onclick="calcEV()">计算</button>
+      </div>
+      <div class="out" id="ev_out">填写左侧并点击计算。</div>
+    </div>
+    <div class="formula">
+      EV = <span class="v">EBITDA × 倍数</span> &nbsp;→&nbsp; 股权价值 = EV − 净债务 &nbsp;→&nbsp; 每股 = 股权价值 ÷ 股本数
+    </div>
+  </div>
+
+  <!-- 绝对估值 -->
+  <div class="card" id="absolute">
+    <h2>🧮 三、绝对估值法（现金流折现） <span class="tag">内在价值</span></h2>
+    <p>核心逻辑：<code>内在价值 = Σ 未来现金流 ÷ (1+折现率)^t</code>。折现率反映风险（股权用 r，企业用 WACC）。下面以两阶段模型为模板。</p>
+
+    <h3>3.1 DCF（自由现金流折现）—— 最主流</h3>
+    <div class="grid2">
+      <div>
+        <p style="font-size:13px"><b>FCFF（公司自由现金流，企业口径）</b>：归属所有资本提供者（债+股）。折现用 WACC，得到企业价值(EV)，再减净债务得股权价值。</p>
+        <p style="font-size:13px"><b>FCFE（股权自由现金流，股权口径）</b>：归属股东。折现用 r（股权成本），直接得股权价值。</p>
+        <p class="note">两阶段：前 n 年高增长 g₁，之后永续增长 g₂（g₂ 应 ≤ 长期GDP/通胀，通常 2%–4%）。</p>
+      </div>
+      <div>
+        <div class="formula">
+          <span class="c"># 两阶段 DCF（以 FCFF 为例）</span><br>
+          EV = Σ<span class="v">[FCFF_t ÷ (1+WACC)^t]</span> (t=1..n)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;+ <span class="v">TV ÷ (1+WACC)^n</span><br>
+          TV = FCFF_n × (1+g₂) ÷ <span class="v">(WACC − g₂)</span><br>
+          股权价值 = EV − 净债务
+        </div>
+      </div>
+    </div>
+
+    <h3>3.2 交互：DCF（FCFF 两阶段）计算器</h3>
+    <div class="grid2">
+      <div class="mc">
+        <div class="row"><label>基期 FCFF₀（万元）</label><input id="dcf_f0" type="number" value="100" step="10"></div>
+        <div class="row"><label>高增长年数 n</label><input id="dcf_n" type="number" value="5" step="1" min="1" max="15"></div>
+        <div class="row"><label>高增长 g₁（%）</label><input id="dcf_g1" type="number" value="12" step="1"></div>
+        <div class="row"><label>永续 g₂（%）</label><input id="dcf_g2" type="number" value="3" step="0.5"></div>
+        <div class="row"><label>WACC（%）</label><input id="dcf_w" type="number" value="9" step="0.5"></div>
+        <div class="row"><label>净债务（万元）</label><input id="dcf_nd" type="number" value="300" step="10"></div>
+        <div class="row"><label>股本数（万股）</label><input id="dcf_sh" type="number" value="200" step="10"></div>
+        <button class="btn-primary" onclick="calcDCF()">计算</button>
+      </div>
+      <div class="out" id="dcf_out">填写左侧并点击计算。</div>
+    </div>
+    <h3>3.3 敏感性热力图：WACC × g₂ 对企业价值(EV)的影响</h3>
+    <div class="formula" style="background:#f8fafc;color:#334155;border:1px solid var(--line)">
+      <span style="color:#0f766e">提示</span>：EV 对 WACC 与 g₂ 都高度敏感——这正是 DCF 的最大风险："垃圾进，垃圾出"。拖动上方计算器后此图自动重绘。
+    </div>
+    <div id="dcf_heat" style="margin-top:8px"></div>
+    <div class="legend"><span><i style="background:hsl(210,70%,55%)"></i>低 EV</span><span><i style="background:hsl(120,60%,50%)"></i>中</span><span><i style="background:hsl(0,70%,55%)"></i>高 EV</span><span>网格内数字=EV(万元)，行=WACC，列=g₂</span></div>
+
+    <h3>3.4 DDM（股利折现模型）</h3>
+    <p style="font-size:13px">适用持续稳定分红的公司（银行、公用事业、红利股）。Gordon 单阶段：<code>P₀ = D₁ ÷ (r − g)</code>；多阶段用于高增长后降速的情形。</p>
+    <div class="grid2">
+      <div class="mc">
+        <div class="row"><label>当前股息 D₀（元/股）</label><input id="ddm_d0" type="number" value="1.00" step="0.1"></div>
+        <div class="row"><label>高增长年数 n</label><input id="ddm_n" type="number" value="5" step="1" min="1" max="15"></div>
+        <div class="row"><label>高增长 g₁（%）</label><input id="ddm_g1" type="number" value="10" step="1"></div>
+        <div class="row"><label>永续 g₂（%）</label><input id="ddm_g2" type="number" value="3" step="0.5"></div>
+        <div class="row"><label>要求回报 r（%）</label><input id="ddm_r" type="number" value="8" step="0.5"></div>
+        <button class="btn-primary" onclick="calcDDM()">计算</button>
+      </div>
+      <div class="out" id="ddm_out">填写左侧并点击计算。</div>
+    </div>
+    <div class="formula">
+      P₀ = Σ<span class="v">[D₀(1+g₁)^t ÷ (1+r)^t]</span> (t=1..n) + <span class="v">[Dₙ(1+g₂)/(r−g₂)] ÷ (1+r)^n</span>
+    </div>
+
+    <h3>3.5 剩余收益模型（RIM）</h3>
+    <p style="font-size:13px">从账面价值出发，加上"超过要求回报的超额利润（剩余收益）"的现值。优点：对 terminal value 依赖低、直接对接净资产。可推导<b>合理市净率 PB</b>：</p>
+    <div class="formula">
+      合理PB = 1 + <span class="v">(ROE − r)</span> ÷ <span class="v">(r − g)</span>
+    </div>
+    <p class="note">ROE &gt; r 时 PB &gt; 1（公司创造价值）；ROE = r 时 PB = 1（仅赚到资金成本，不增不减）；ROE &lt; r 时 PB &lt; 1（毁灭价值）。</p>
+  </div>
+
+  <!-- 资产基础法 -->
+  <div class="card" id="asset">
+    <h2>🏗️ 四、资产基础法（底线价值） <span class="tag">清算/重置</span></h2>
+    <div class="grid3">
+      <div class="mc"><h4>账面价值法</h4><p style="font-size:13px">用资产负债表净资产。最保守，但历史成本计量使无形资产、商誉、品牌严重低估。破净(GZ)&lt;1 时值得关注。</p></div>
+      <div class="mc"><h4>清算价值法</h4><p style="font-size:13px">假设即时变卖资产、清偿负债后的净回收。用于破产、控股收购、困境投资。远低于持续经营价值。</p></div>
+      <div class="mc"><h4>重置成本法</h4><p style="font-size:13px">重新购置同等产能所需资金。Tobin's Q = 市场价值 ÷ 重置成本；Q&lt;1 可能被低估。适合重资产行业。</p></div>
+    </div>
+    <div class="analogy">🍎 <b>类比</b>：资产基础法问的是"这堆生产要素本身值多少钱"，而绝对估值问的是"它未来能赚多少钱"。前者是地板（再差也不会远低于此），后者是天花板。</div>
+  </div>
+
+  <!-- 进阶 -->
+  <div class="card" id="advanced">
+    <h2>🚀 五、进阶 / 特殊情形 <span class="tag">专题</span></h2>
+    <table>
+      <thead><tr><th>方法</th><th>一句话</th><th>适用</th></tr></thead>
+      <tbody>
+        <tr><td><b>实物期权</b></td><td>用 Black-Scholes / 二叉树给"未来扩张、延迟、放弃"的选择权定价</td><td>矿业、专利药、高不确定性成长项目</td></tr>
+        <tr><td><b>LBO 估值</b></td><td>杠杆收购：倒算买家能接受的最高进价（IRR 驱动）</td><td>私募股权、并购</td></tr>
+        <tr><td><b>分部加总(SOTP)</b></td><td>对多元集团各业务分别估值再加总（常+控股溢价）</td><td>综合集团、控股公司</td></tr>
+        <tr><td><b>VC 法</b></td><td>预测退出时估值，按目标年化回报倒推当前合理入股价</td><td>早期/风险投资</td></tr>
+        <tr><td><b>可比交易法</b></td><td>用近期真实并购交易的倍数（通常含控制权溢价）</td><td>并购、控制权定价</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 怎么选 -->
+  <div class="card" id="choose">
+    <h2>🎯 六、怎么选：方法选择速查 <span class="tag">实战</span></h2>
+    <table>
+      <thead><tr><th>公司类型</th><th>首选</th><th>辅助/参考</th></tr></thead>
+      <tbody>
+        <tr><td>盈利稳定的成熟公司</td><td>P/E、DDM</td><td>EV/EBITDA、资产法</td></tr>
+        <tr><td>高增长未盈利</td><td>P/S、EV/EBITDA(远期)</td><td>远期 P/E、DCF(情景)</td></tr>
+        <tr><td>重资产 / 周期股</td><td>EV/EBITDA、P/B</td><td>重置成本、DCF</td></tr>
+        <tr><td>银行 / 保险</td><td>P/B、P/E</td><td>股息率、RIM</td></tr>
+        <tr><td>控股收购 / 破净</td><td>资产基础法、LBO</td><td>SOTP、可比交易</td></tr>
+        <tr><td>多元集团</td><td>SOTP</td><td>相对估值(各分部)</td></tr>
+      </tbody>
+    </table>
+    <div class="analogy">🍎 <b>经验法则</b>：永远用<b>至少两种方法交叉验证</b>。相对估值告诉你"市场现在给同类什么价"，绝对估值告诉你"按基本面它值多少"，两者缺口就是你的安全边际来源。</div>
+  </div>
+
+  <!-- 与三表衔接 -->
+  <div class="card" id="link">
+    <h2>🔗 七、与「三张表财务模型」的衔接 <span class="tag">闭环</span></h2>
+    <p>你已建的三张表，正是绝对估值法的<b>数据工厂</b>：</p>
+    <table>
+      <thead><tr><th>三表里的科目</th><th>喂给哪个估值模型</th><th>怎么转</th></tr></thead>
+      <tbody>
+        <tr><td>利润表 · 净利润</td><td>DDM / FCFE</td><td>净利润 − 资本开支 + 折旧摊销 − 营运资本增加 + 净借款 = FCFE；或 × 分红率 = 股息</td></tr>
+        <tr><td>现金流量表 · 经营现金流</td><td>DCF(FCFF)</td><td>FCFF = 经营现金流 − 资本开支 + 利息×(1−税率)</td></tr>
+        <tr><td>资产负债表 · 净债务</td><td>所有 EV 口径模型</td><td>股权价值 = EV − 净债务（ bridge ）</td></tr>
+        <tr><td>利润表 · EPS</td><td>P/E、PEG</td><td>直接用 EPS 配合合理倍数</td></tr>
+        <tr><td>利润表 · EBITDA</td><td>EV/EBITDA</td><td>EBITDA = 净利润 + 利息 + 税 + 折旧 + 摊销</td></tr>
+      </tbody>
+    </table>
+    <p class="note">所以推荐工作流：先跑三张表得到预测的利润表/现金流/资产负债表 → 再把这些预测数喂进本页的 DCF / 相对估值计算器，得到内在价值区间 → 与市价比较，判断贵贱与安全边际。</p>
+  </div>
+
+  <footer>估值模型体系 · 学习版 · 纯前端无依赖 · 所有计算仅供学习示意，不构成投资建议。</footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=(v,d=2)=>{ if(!isFinite(v))return '—'; return v.toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d}); };
+const num=id=>{ const v=parseFloat($(id).value); return isNaN(v)?0:v; };
+const pct=id=>num(id)/100;
+
+/* ---------- P/E & PEG ---------- */
+function calcPE(){
+  const eps=num('pe_eps'), pay=pct('pe_pay'), g=pct('pe_g'), r=pct('pe_r');
+  if(r<=g){ $('pe_out').innerHTML='⚠️ 要求回报率 r 必须大于增长率 g，否则公式无意义（分母 r−g ≤ 0）。'; return; }
+  const pe=pay*(1+g)/(r-g);
+  const price=pe*eps;
+  const peg=pe/(g*100);
+  const pj= peg<1?'<span class="pill g">PEG&lt;1 偏便宜</span>':(peg>2?'<span class="pill r">PEG&gt;2 偏贵</span>':'<span class="pill y">PEG 适中</span>');
+  $('pe_out').innerHTML=
+    '合理 P/E = <b>'+fmt(pe,1)+'</b> 倍<br>'+
+    '合理股价 = <b>'+fmt(price,2)+'</b> 元/股<br>'+
+    'PEG = <b>'+fmt(peg,2)+'</b> '+pj+'<br>'+
+    '<span class="note">含义：按分红率 '+fmt(pay*100,0)+'%、增长 '+fmt(g*100,1)+'%、折现 '+fmt(r*100,1)+'% 推导的内在市盈率。</span>';
+}
+
+/* ---------- EV/EBITDA 可比 ---------- */
+function calcEV(){
+  const ebitda=num('ev_ebitda'), mul=num('ev_mul'), nd=num('ev_nd'), sh=num('ev_sh');
+  const ev=ebitda*mul, eq=ev-nd, price=sh>0?eq/sh:0;
+  $('ev_out').innerHTML=
+    '企业价值 EV = <b>'+fmt(ev,1)+'</b> 万元<br>'+
+    '股权价值 = EV − 净债务 = <b>'+fmt(eq,1)+'</b> 万元<br>'+
+    '每股价值 = <b>'+fmt(price,2)+'</b> 元/股<br>'+
+    '<span class="note">若净债务 &gt; EV，股权价值为负（资不抵债），此时模型失效。</span>';
+}
+
+/* ---------- DCF (FCFF 两阶段) ---------- */
+function dcfEV(){
+  const f0=num('dcf_f0'), n=Math.max(1,Math.round(num('dcf_n'))), g1=pct('dcf_g1'), g2=pct('dcf_g2'), w=pct('dcf_w');
+  if(w<=g2){ return {err:'WACC 必须大于永续增长率 g₂'}; }
+  let ev=0, explicitSum=0;
+  for(let t=1;t<=n;t++){ const f=f0*Math.pow(1+g1,t); const pv=f/Math.pow(1+w,t); ev+=pv; explicitSum+=pv; }
+  const fn=f0*Math.pow(1+g1,n);
+  const tv=fn*(1+g2)/(w-g2);
+  const pvtv=tv/Math.pow(1+w,n);
+  ev+=pvtv;
+  return {ev, explicitSum, pvtv, f0,n,g1,g2,w};
+}
+function calcDCF(){
+  const r=dcfEV();
+  if(r.err){ $('dcf_out').innerHTML='⚠️ '+r.err+'，否则终值TV分母(WACC−g₂)≤0。'; return; }
+  const nd=num('dcf_nd'), sh=num('dcf_sh');
+  const eq=r.ev-nd, price=sh>0?eq/sh:0;
+  $('dcf_out').innerHTML=
+    '企业价值 EV = <b>'+fmt(r.ev,1)+'</b> 万元<br>'+
+    '　其中 显式期现值（前'+r.n+'年合计）= '+fmt(r.explicitSum,1)+' ，终值现值 = <b>'+fmt(r.pvtv,1)+'</b>（占比 '+fmt(r.pvtv/r.ev*100,0)+'%）'+'<br>'+
+    '股权价值 = EV − 净债务 = <b>'+fmt(eq,1)+'</b> 万元<br>'+
+    '每股价值 = <b>'+fmt(price,2)+'</b> 元/股<br>'+
+    '<span class="note">终值占比越高，估值对 g₂/WACC 越敏感（看下方热力图）。</span>';
+  drawHeat();
+}
+function drawHeat(){
+  const base=dcfEV(); if(base.err) return;
+  const bW=base.w, bg=base.g2;
+  const wOffs=[-0.02,-0.01,0,0.01,0.02];
+  const gOffs=[-0.01,-0.005,0,0.005,0.01];
+  const cells=[]; let minV=1e18,maxV=-1e18;
+  for(const wo of wOffs){ for(const go of gOffs){
+    const w=bW+wo, g=bg+go;
+    if(w<=g){ cells.push({w,g,ev:null}); continue; }
+    let ev=0; const f0=num('dcf_f0'), n=Math.max(1,Math.round(num('dcf_n'))), g1=pct('dcf_g1');
+    for(let t=1;t<=n;t++){ const f=f0*Math.pow(1+g1,t); ev+=f/Math.pow(1+w,t); }
+    const fn=f0*Math.pow(1+g1,n); ev+=fn*(1+g)/(w-g);
+    cells.push({w,g,ev}); minV=Math.min(minV,ev); maxV=Math.max(maxV,ev);
+  }}
+  const W=520,H=300,padL=44,padT=30,padB=20,padR=10;
+  const cw=(W-padL-padR)/gOffs.length, ch=(H-padT-padB)/wOffs.length;
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:560px">';
+  gOffs.forEach((go,j)=>{ const x=padL+j*cw+cw/2; svg+='<text x="'+x+'" y="'+(padT-10)+'" font-size="10" fill="#475569" text-anchor="middle">g₂ '+(((bg+go)*100).toFixed(1))+'%</text>'; });
+  wOffs.forEach((wo,i)=>{ const y=padT+i*ch;
+    svg+='<text x="'+(padL-6)+'" y="'+(y+ch/2+3)+'" font-size="10" fill="#475569" text-anchor="end">WACC '+(((bW+wo)*100).toFixed(1))+'%</text>';
+    gOffs.forEach((go,j)=>{ const x=padL+j*cw; const c=cells.find(c=>Math.abs(c.w-(bW+wo))<1e-9&&Math.abs(c.g-(bg+go))<1e-9);
+      if(!c||c.ev===null){ svg+='<rect x="'+x+'" y="'+y+'" width="'+(cw-2)+'" height="'+(ch-2)+'" fill="#eee"/><text x="'+(x+cw/2)+'" y="'+(y+ch/2+3)+'" font-size="9" fill="#999" text-anchor="middle">—</text>'; return; }
+      const t=(c.ev-minV)/(maxV-minV||1); const hue=210-210*t; const col='hsl('+hue.toFixed(0)+',65%,55%)';
+      svg+='<rect x="'+x+'" y="'+y+'" width="'+(cw-2)+'" height="'+(ch-2)+'" rx="3" fill="'+col+'"/>';
+      svg+='<text x="'+(x+cw/2)+'" y="'+(y+ch/2+3)+'" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">'+fmt(c.ev,0)+'</text>';
+    });
+  });
+  svg+='</svg>';
+  $('dcf_heat').innerHTML=svg;
+}
+
+/* ---------- DDM 两阶段 ---------- */
+function calcDDM(){
+  const d0=num('ddm_d0'), n=Math.max(1,Math.round(num('ddm_n'))), g1=pct('ddm_g1'), g2=pct('ddm_g2'), r=pct('ddm_r');
+  if(r<=g2){ $('ddm_out').innerHTML='⚠️ 要求回报 r 必须大于永续增长率 g₂。'; return; }
+  let p0=0, high=0;
+  for(let t=1;t<=n;t++){ const d=d0*Math.pow(1+g1,t); const pv=d/Math.pow(1+r,t); p0+=pv; if(t===n) high=pv; }
+  const dn=d0*Math.pow(1+g1,n);
+  const term=dn*(1+g2)/(r-g2);
+  const pvterm=term/Math.pow(1+r,n);
+  p0+=pvterm;
+  $('ddm_out').innerHTML=
+    '每股内在价值 P₀ = <b>'+fmt(p0,2)+'</b> 元<br>'+
+    '　其中 高增长期股息现值 = '+fmt(p0-pvterm,2)+'，终值现值 = <b>'+fmt(pvterm,2)+'</b>（占比 '+fmt(pvterm/p0*100,0)+'%）'+'<br>'+
+    '<span class="note">红利股/银行常用；若公司不分红或分红率突变，DDM 失效，应改用 DCF/FCFE。</span>';
+}
+
+/* 初始渲染 */
+calcPE(); calcEV(); calcDCF(); calcDDM();
+</script>
+</body>
+</html>
